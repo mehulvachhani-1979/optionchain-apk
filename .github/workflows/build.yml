@@ -2,12 +2,15 @@ name: Build APK
 
 on: [push]
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
+      - name: Checkout
         uses: actions/checkout@v4
 
       - name: Set up Java 17
@@ -19,16 +22,24 @@ jobs:
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
 
-      - name: Install Gradle
+      - name: Accept Android licenses
+        run: yes | sdkmanager --licenses || true
+
+      - name: Install build tools
+        run: sdkmanager "build-tools;34.0.0" "platforms;android-34"
+
+      - name: Install Gradle 8.2
         run: |
-          wget -q https://services.gradle.org/distributions/gradle-8.2-bin.zip
-          unzip -q gradle-8.2-bin.zip -d $HOME
-          echo "$HOME/gradle-8.2/bin" >> $GITHUB_PATH
+          wget -q https://services.gradle.org/distributions/gradle-8.2-bin.zip -O gradle.zip
+          unzip -q gradle.zip -d $HOME/gradle-dist
+          echo "$HOME/gradle-dist/gradle-8.2/bin" >> $GITHUB_PATH
 
       - name: Build debug APK
-        run: gradle assembleDebug --stacktrace
+        run: |
+          gradle assembleDebug --no-daemon --stacktrace
         env:
           ANDROID_HOME: /usr/local/lib/android/sdk
+          ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
